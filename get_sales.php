@@ -1,8 +1,10 @@
 <?php
 
 include "db.php";
+include "auth.php";
+$userId = require_login();
 
-$sql = "
+$stmt = $conn->prepare("
 SELECT
 sales.id,
 customers.name AS customer,
@@ -19,21 +21,24 @@ ON sales.customer_id = customers.id
 JOIN products
 ON sales.product_id = products.id
 
+WHERE sales.user_id = ?
+
 ORDER BY sales.id DESC
-";
+");
 
-$result = $conn->query($sql);
+$stmt->bind_param("i", $userId);
+$stmt->execute();
+$result = $stmt->get_result();
 
-$data=[];
+$data = [];
 
-while($row=$result->fetch_assoc()){
-    $data[]=$row;
+while ($row = $result->fetch_assoc()) {
+    $data[] = $row;
 }
 
 header("Content-Type: application/json");
-
 echo json_encode($data);
 
+$stmt->close();
 $conn->close();
-
 ?>

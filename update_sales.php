@@ -1,6 +1,8 @@
 <?php
 
 include "db.php";
+include "auth.php";
+$userId = require_login();
 
 header("Content-Type: application/json");
 
@@ -9,26 +11,23 @@ $customer = $_POST["customer_id"];
 $product  = $_POST["product_id"];
 $quantity = $_POST["quantity"];
 
-// Get current product price
 $get = $conn->prepare("
 SELECT price
 FROM products
-WHERE id=?
+WHERE id=? AND user_id=?
 ");
 
-$get->bind_param("i", $product);
+$get->bind_param("ii", $product, $userId);
 $get->execute();
 
 $result = $get->get_result();
 
-if($result->num_rows == 0){
-
+if ($result->num_rows == 0) {
     echo json_encode([
-        "success"=>false,
-        "message"=>"Product not found."
+        "success" => false,
+        "message" => "Product not found."
     ]);
     exit;
-
 }
 
 $row = $result->fetch_assoc();
@@ -44,35 +43,31 @@ product_id=?,
 quantity=?,
 price=?,
 total=?
-WHERE id=?
+WHERE id=? AND user_id=?
 ");
 
 $stmt->bind_param(
-    "iiiddi",
+    "iiiddii",
     $customer,
     $product,
     $quantity,
     $price,
     $total,
-    $id
+    $id,
+    $userId
 );
 
-if($stmt->execute()){
-
+if ($stmt->execute()) {
     echo json_encode([
-        "success"=>true,
-        "message"=>"Sale updated successfully."
+        "success" => true,
+        "message" => "Sale updated successfully."
     ]);
-
-}else{
-
+} else {
     echo json_encode([
-        "success"=>false,
-        "message"=>"Could not update sale."
+        "success" => false,
+        "message" => "Could not update sale."
     ]);
-
 }
 
 $conn->close();
-
 ?>

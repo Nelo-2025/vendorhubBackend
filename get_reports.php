@@ -1,47 +1,33 @@
 <?php
 
 include "db.php";
+include "auth.php";
+$userId = require_login();
 
 $response = [];
 
-/* =========================
-   TOTAL SALES
-========================= */
-
-$sql = "SELECT COUNT(*) AS totalSales FROM sales";
-$result = $conn->query($sql);
-$row = $result->fetch_assoc();
-
+$stmt = $conn->prepare("SELECT COUNT(*) AS totalSales FROM sales WHERE user_id=?");
+$stmt->bind_param("i", $userId);
+$stmt->execute();
+$row = $stmt->get_result()->fetch_assoc();
 $response["totalSales"] = $row["totalSales"];
+$stmt->close();
 
-
-/* =========================
-   TOTAL REVENUE
-========================= */
-
-$sql = "SELECT IFNULL(SUM(total),0) AS totalRevenue FROM sales";
-$result = $conn->query($sql);
-$row = $result->fetch_assoc();
-
+$stmt = $conn->prepare("SELECT IFNULL(SUM(total),0) AS totalRevenue FROM sales WHERE user_id=?");
+$stmt->bind_param("i", $userId);
+$stmt->execute();
+$row = $stmt->get_result()->fetch_assoc();
 $response["totalRevenue"] = $row["totalRevenue"];
+$stmt->close();
 
-
-/* =========================
-   PRODUCTS SOLD
-========================= */
-
-$sql = "SELECT IFNULL(SUM(quantity),0) AS productsSold FROM sales";
-$result = $conn->query($sql);
-$row = $result->fetch_assoc();
-
+$stmt = $conn->prepare("SELECT IFNULL(SUM(quantity),0) AS productsSold FROM sales WHERE user_id=?");
+$stmt->bind_param("i", $userId);
+$stmt->execute();
+$row = $stmt->get_result()->fetch_assoc();
 $response["productsSold"] = $row["productsSold"];
+$stmt->close();
 
-
-/* =========================
-   RECENT SALES
-========================= */
-
-$sql = "
+$stmt = $conn->prepare("
 SELECT
     sales.id,
     customers.name AS customer,
@@ -54,11 +40,14 @@ INNER JOIN customers
 ON sales.customer_id = customers.id
 INNER JOIN products
 ON sales.product_id = products.id
+WHERE sales.user_id = ?
 ORDER BY sales.id DESC
 LIMIT 10
-";
+");
 
-$result = $conn->query($sql);
+$stmt->bind_param("i", $userId);
+$stmt->execute();
+$result = $stmt->get_result();
 
 $sales = [];
 
@@ -67,16 +56,10 @@ while ($row = $result->fetch_assoc()) {
 }
 
 $response["sales"] = $sales;
-
-
-/* =========================
-   RETURN JSON
-========================= */
+$stmt->close();
 
 header("Content-Type: application/json");
-
 echo json_encode($response);
 
 $conn->close();
-
 ?>

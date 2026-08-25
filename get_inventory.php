@@ -1,6 +1,8 @@
 <?php
 
 include "db.php";
+include "auth.php";
+$userId = require_login();
 
 $search = "";
 
@@ -16,11 +18,12 @@ SELECT
     price,
     stock
 FROM products
-WHERE name LIKE CONCAT('%', ?, '%')
+WHERE user_id = ?
+AND name LIKE CONCAT('%', ?, '%')
 ORDER BY name ASC
 ");
 
-$stmt->bind_param("s", $search);
+$stmt->bind_param("is", $userId, $search);
 $stmt->execute();
 
 $result = $stmt->get_result();
@@ -36,5 +39,4 @@ echo json_encode($data);
 
 $stmt->close();
 $conn->close();
-
 ?>

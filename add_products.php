@@ -1,6 +1,9 @@
 <?php
 
 include "db.php";
+include "auth.php";
+include "product_image.php";
+$userId = require_login();
 
 header("Content-Type: application/json");
 
@@ -17,27 +20,45 @@ if ($name == "" || $category == "" || $price == "" || $stock == "") {
     exit();
 }
 
-$stmt = $conn->prepare("INSERT INTO products(name, category, price, stock) VALUES (?, ?, ?, ?)");
+$upload = upload_product_image($_FILES["image"] ?? null);
 
-$stmt->bind_param("ssdi", $name, $category, $price, $stock);
+if (!$upload["ok"]) {
+    echo json_encode([
+        "success" => false,
+        "message" => $upload["message"]
+    ]);
+    exit();
+}
+
+$image = $upload["filename"];
+
+if ($image) {
+    $stmt = $conn->prepare(
+        "INSERT INTO products(name, category, price, stock, user_id, image) VALUES (?, ?, ?, ?, ?, ?)"
+    );
+    $stmt->bind_param("ssdiis", $name, $category, $price, $stock, $userId, $image);
+} else {
+    $stmt = $conn->prepare(
+        "INSERT INTO products(name, category, price, stock, user_id) VALUES (?, ?, ?, ?, ?)"
+    );
+    $stmt->bind_param("ssdii", $name, $category, $price, $stock, $userId);
+}
 
 if ($stmt->execute()) {
-
     echo json_encode([
         "success" => true,
         "message" => "Product added successfully."
     ]);
-
 } else {
-
+    if ($image) {
+        delete_product_image_file($image);
+    }
     echo json_encode([
         "success" => false,
-        "message" => "Failed to add product."
+        "message" => "Failed to add product. If this persists, add an `image` column to products."
     ]);
-
 }
 
 $stmt->close();
 $conn->close();
-
 ?>

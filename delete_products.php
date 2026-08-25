@@ -1,5 +1,9 @@
 <?php
+
 include "db.php";
+include "auth.php";
+include "product_image.php";
+$userId = require_login();
 
 header("Content-Type: application/json");
 
@@ -13,10 +17,19 @@ if (!isset($_POST["id"])) {
 
 $id = intval($_POST["id"]);
 
-$stmt = $conn->prepare("DELETE FROM products WHERE id = ?");
-$stmt->bind_param("i", $id);
+$find = $conn->prepare("SELECT image FROM products WHERE id = ? AND user_id = ?");
+$find->bind_param("ii", $id, $userId);
+$find->execute();
+$row = $find->get_result()->fetch_assoc();
+$find->close();
+
+$stmt = $conn->prepare("DELETE FROM products WHERE id = ? AND user_id = ?");
+$stmt->bind_param("ii", $id, $userId);
 
 if ($stmt->execute()) {
+    if ($row && !empty($row["image"])) {
+        delete_product_image_file($row["image"]);
+    }
     echo json_encode([
         "success" => true,
         "message" => "Product deleted successfully."

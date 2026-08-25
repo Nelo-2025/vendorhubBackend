@@ -1,17 +1,22 @@
 <?php
 
 include "db.php";
+include "auth.php";
+$userId = require_login();
 
-$sql="SELECT * FROM products ORDER BY id DESC";
+$stmt = $conn->prepare("SELECT * FROM products WHERE user_id=? ORDER BY id DESC");
+$stmt->bind_param("i", $userId);
+$stmt->execute();
+$result = $stmt->get_result();
 
-$result=$conn->query($sql);
+$data = [];
 
-$data=[];
-
-while($row=$result->fetch_assoc()){
-
-$data[]=$row;
-
+while ($row = $result->fetch_assoc()) {
+    $data[] = $row;
 }
 
 echo json_encode($data);
+
+$stmt->close();
+$conn->close();
+?>
